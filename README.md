@@ -18,7 +18,25 @@ The strategy combines two signals to decide when to enter and exit positions:
 
 Signals are shifted by one day to prevent look-ahead bias.
 
-## Quick Start
+
+## Web Dashboard
+
+The project includes a browser-based UI for interactive backtesting.
+
+```bash
+python app.py
+# Open http://localhost:5000 in your browser
+```
+
+Features:
+- Select coin, adjust MA periods, capital, stop-loss from the UI
+- Click "Run Backtest" to see results instantly
+- Interactive equity curve and signals charts
+- Full trade log table with P&L
+
+![Dashboard](https://img.shields.io/badge/UI-Flask_Dashboard-blue)
+
+## Quick Start (CLI)
 
 ```bash
 # install dependencies

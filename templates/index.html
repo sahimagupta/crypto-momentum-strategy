@@ -1,0 +1,408 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Momentum Backtester</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f0f23;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 24px 40px;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #00d2ff;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .controls {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .controls h2 {
+            font-size: 15px;
+            color: #00d2ff;
+            margin-bottom: 16px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #00d2ff;
+        }
+
+        .btn-run {
+            padding: 8px 32px;
+            background: linear-gradient(135deg, #00d2ff, #0090ff);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-run:hover { opacity: 0.9; }
+        .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #00d2ff;
+            display: none;
+        }
+
+        .loading.active { display: block; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top: 3px solid #00d2ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .results { display: none; }
+        .results.active { display: block; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 14px;
+        }
+
+        .metric-card .label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #00d2ff;
+        }
+
+        .metric-card .value.positive { color: #00ff88; }
+        .metric-card .value.negative { color: #ff4444; }
+
+        .chart-section {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .chart-section h3 {
+            font-size: 14px;
+            color: #00d2ff;
+            margin-bottom: 12px;
+        }
+
+        .chart-section img {
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        .trades-table {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .trades-table h3 {
+            font-size: 14px;
+            color: #00d2ff;
+            margin-bottom: 12px;
+        }
+
+        .trades-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .trades-table th {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .trades-table td {
+            padding: 8px;
+            border-bottom: 1px solid #1f1f3a;
+        }
+
+        .trades-table tr:hover { background: #16213e; }
+
+        .tag-buy { color: #00ff88; font-weight: 600; }
+        .tag-sell { color: #ff4444; font-weight: 600; }
+        .tag-stop { color: #ff9800; font-weight: 600; }
+
+        .error-msg {
+            background: #2d1515;
+            border: 1px solid #ff4444;
+            color: #ff6b6b;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Crypto Momentum Strategy Backtester</h1>
+        <p>MA Crossover + Momentum Filter | Historical Simulation</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Parameters</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Coin</label>
+                    <select id="coin">
+                        <option value="bitcoin">Bitcoin (BTC)</option>
+                        <option value="ethereum">Ethereum (ETH)</option>
+                        <option value="solana">Solana (SOL)</option>
+                        <option value="cardano">Cardano (ADA)</option>
+                        <option value="ripple">Ripple (XRP)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lookback (days)</label>
+                    <input type="number" id="days" value="365" min="90" max="1000">
+                </div>
+                <div class="form-group">
+                    <label>Short MA</label>
+                    <input type="number" id="short_ma" value="20" min="5" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Long MA</label>
+                    <input type="number" id="long_ma" value="50" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Capital ($)</label>
+                    <input type="number" id="capital" value="10000" min="100">
+                </div>
+                <div class="form-group">
+                    <label>Stop Loss (%)</label>
+                    <input type="number" id="stop_loss" value="-5" min="-50" max="0">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button class="btn-run" id="runBtn" onclick="runBacktest()">Run Backtest</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Fetching data and running simulation...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="metrics-grid" id="metricsGrid"></div>
+
+            <div class="chart-section">
+                <h3>Equity Curve</h3>
+                <img id="equityChart" src="" alt="Equity Curve">
+            </div>
+
+            <div class="chart-section">
+                <h3>Trading Signals</h3>
+                <img id="signalsChart" src="" alt="Signals">
+            </div>
+
+            <div class="trades-table">
+                <h3>Trade Log</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Action</th>
+                                <th>Price</th>
+                                <th>Units</th>
+                                <th>Fee</th>
+                                <th>P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function runBacktest() {
+            const btn = document.getElementById("runBtn");
+            const loading = document.getElementById("loading");
+            const results = document.getElementById("results");
+            const errorMsg = document.getElementById("errorMsg");
+
+            btn.disabled = true;
+            loading.classList.add("active");
+            results.classList.remove("active");
+            errorMsg.style.display = "none";
+
+            const params = {
+                coin: document.getElementById("coin").value,
+                days: document.getElementById("days").value,
+                short_ma: document.getElementById("short_ma").value,
+                long_ma: document.getElementById("long_ma").value,
+                capital: document.getElementById("capital").value,
+                stop_loss: parseFloat(document.getElementById("stop_loss").value) / 100,
+            };
+
+            try {
+                const resp = await fetch("/run", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(params),
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    throw new Error(data.error || "Something went wrong");
+                }
+
+                renderMetrics(data.metrics);
+                document.getElementById("equityChart").src = "data:image/png;base64," + data.equity_chart;
+                document.getElementById("signalsChart").src = "data:image/png;base64," + data.signals_chart;
+                renderTrades(data.trades);
+
+                results.classList.add("active");
+
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove("active");
+            }
+        }
+
+        function renderMetrics(metrics) {
+            const grid = document.getElementById("metricsGrid");
+            const highlight = ["Total Return", "Sharpe Ratio", "Max Drawdown", "Win Rate",
+                              "Final Portfolio", "Buy & Hold Return", "Sortino Ratio", "Profit Factor"];
+
+            let html = "";
+            for (const key of highlight) {
+                if (metrics[key] !== undefined) {
+                    const val = String(metrics[key]);
+                    let cls = "";
+                    if (val.includes("-")) cls = "negative";
+                    else if (val.includes("%") || val.includes("$")) cls = "positive";
+
+                    html += `<div class="metric-card">
+                        <div class="label">${key}</div>
+                        <div class="value ${cls}">${val}</div>
+                    </div>`;
+                }
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderTrades(trades) {
+            const tbody = document.getElementById("tradesBody");
+            let html = "";
+            for (const t of trades) {
+                const cls = t.action === "BUY" ? "tag-buy" :
+                            t.action === "STOP_LOSS" ? "tag-stop" : "tag-sell";
+                const pnlCls = t.pnl > 0 ? "tag-buy" : t.pnl < 0 ? "tag-sell" : "";
+                html += `<tr>
+                    <td>${t.date}</td>
+                    <td class="${cls}">${t.action}</td>
+                    <td>$${Number(t.price).toLocaleString()}</td>
+                    <td>${t.units}</td>
+                    <td>$${Number(t.fee).toFixed(2)}</td>
+                    <td class="${pnlCls}">$${Number(t.pnl).toFixed(2)}</td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
