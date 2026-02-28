@@ -62,6 +62,38 @@ The backtester generates:
 - `output/<coin>/daily_portfolio.csv` - daily portfolio values
 - `output/<coin>/trade_log.csv` - all executed trades with P&L
 
+
+## Sample Output
+
+### Performance Metrics
+```
+==================================================
+         STRATEGY PERFORMANCE SUMMARY
+==================================================
+  Total Return                         -8.49%
+  Annual Return                        -8.54%
+  Sharpe Ratio                         -0.773
+  Sortino Ratio                        -1.002
+  Calmar Ratio                         -0.422
+  Max Drawdown                        -20.25%
+  Max DD Duration                    282 days
+  Annual Volatility                    15.21%
+  Win Rate                              45.0%
+  Avg Win                             $218.28
+  Avg Loss                           $-237.03
+  Profit Factor                          0.75
+  Total Trades                             40
+  Buy & Hold Return                   -30.29%
+  Final Portfolio                   $9,150.60
+==================================================
+```
+
+### Equity Curve
+![Equity Curve](output/bitcoin/equity_curve.png)
+
+### Trading Signals
+![Trading Signals](output/bitcoin/signals.png)
+
 ## Project Structure
 
 `
