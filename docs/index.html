@@ -1,0 +1,445 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Momentum Backtester</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+
+        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 32px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; color: #00d2ff; }
+        .header a { color: #888; text-decoration: none; font-size: 13px; }
+        .header a:hover { color: #00d2ff; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        .controls { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 18px; margin-bottom: 20px; }
+        .controls h2 { font-size: 14px; color: #00d2ff; margin-bottom: 14px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+        .form-group label { display: block; font-size: 10px; color: #888; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group select, .form-group input { width: 100%; padding: 7px 10px; background: #16213e; border: 1px solid #333; border-radius: 4px; color: #e0e0e0; font-size: 13px; }
+        .form-group select:focus, .form-group input:focus { outline: none; border-color: #00d2ff; }
+
+        .btn { padding: 7px 28px; background: linear-gradient(135deg, #00d2ff, #0090ff); color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .loading { text-align: center; padding: 50px; display: none; }
+        .loading.show { display: block; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #333; border-top: 3px solid #00d2ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { background: #2d1515; border: 1px solid #ff4444; color: #ff6b6b; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: none; font-size: 13px; }
+
+        .results { display: none; }
+        .results.show { display: block; }
+
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .metric { background: #1a1a2e; border: 1px solid #333; border-radius: 6px; padding: 12px; }
+        .metric .lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric .val { font-size: 18px; font-weight: 700; margin-top: 3px; color: #00d2ff; }
+        .metric .val.pos { color: #00ff88; }
+        .metric .val.neg { color: #ff4444; }
+
+        .chart-box { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+        .chart-box h3 { font-size: 13px; color: #00d2ff; margin-bottom: 10px; }
+
+        canvas { width: 100% !important; height: auto !important; }
+
+        .trades-box { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+        .trades-box h3 { font-size: 13px; color: #00d2ff; margin-bottom: 10px; }
+        .trades-wrap { max-height: 350px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { text-align: left; padding: 6px 8px; border-bottom: 1px solid #333; color: #888; font-size: 10px; text-transform: uppercase; }
+        td { padding: 6px 8px; border-bottom: 1px solid #1f1f3a; }
+        tr:hover { background: #16213e; }
+        .buy { color: #00ff88; font-weight: 600; }
+        .sell { color: #ff4444; font-weight: 600; }
+
+        .footer { text-align: center; padding: 20px; color: #555; font-size: 12px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Crypto Momentum Backtester</h1>
+            <span style="color:#888;font-size:12px">MA Crossover + Momentum Filter</span>
+        </div>
+        <a href="https://github.com/sahimagupta/crypto-momentum-strategy" target="_blank">View Source on GitHub</a>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Strategy Parameters</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Coin</label>
+                    <select id="coin">
+                        <option value="bitcoin">Bitcoin (BTC)</option>
+                        <option value="ethereum">Ethereum (ETH)</option>
+                        <option value="solana">Solana (SOL)</option>
+                        <option value="cardano">Cardano (ADA)</option>
+                        <option value="ripple">Ripple (XRP)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lookback (days)</label>
+                    <input type="number" id="days" value="365" min="90" max="730">
+                </div>
+                <div class="form-group">
+                    <label>Short MA</label>
+                    <input type="number" id="shortMa" value="20" min="5" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Long MA</label>
+                    <input type="number" id="longMa" value="50" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Capital ($)</label>
+                    <input type="number" id="capital" value="10000" min="100">
+                </div>
+                <div class="form-group">
+                    <label>Stop Loss (%)</label>
+                    <input type="number" id="stopLoss" value="-5" min="-50" max="0">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button class="btn" id="runBtn" onclick="runBacktest()">Run Backtest</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="error" id="err"></div>
+        <div class="loading" id="loading"><div class="spinner"></div><p>Fetching data from CoinGecko...</p></div>
+
+        <div class="results" id="results">
+            <div class="metrics" id="metricsDiv"></div>
+            <div class="chart-box"><h3>Equity Curve: Strategy vs Buy &amp; Hold</h3><canvas id="equityChart"></canvas></div>
+            <div class="chart-box"><h3>Price &amp; Trading Signals</h3><canvas id="priceChart"></canvas></div>
+            <div class="chart-box"><h3>Momentum (Rate of Change %)</h3><canvas id="momentumChart"></canvas></div>
+            <div class="trades-box"><h3>Trade Log</h3><div class="trades-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Price</th><th>P&amp;L</th></tr></thead><tbody id="tradesTbody"></tbody></table></div></div>
+        </div>
+
+        <div class="footer">Data from CoinGecko Free API | Strategy for educational purposes only</div>
+    </div>
+
+<script>
+let charts = {};
+
+async function fetchData(coinId, days) {
+    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`CoinGecko API error: ${resp.status}. Try again in a minute.`);
+    return await resp.json();
+}
+
+function sma(arr, period) {
+    const result = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (i < period - 1) { result.push(null); continue; }
+        let sum = 0;
+        for (let j = i - period + 1; j <= i; j++) sum += arr[j];
+        result.push(sum / period);
+    }
+    return result;
+}
+
+function momentum(arr, period) {
+    const result = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (i < period || arr[i - period] === 0) { result.push(null); continue; }
+        result.push(((arr[i] - arr[i - period]) / arr[i - period]) * 100);
+    }
+    return result;
+}
+
+function runStrategy(prices, dates, volumes, shortP, longP, momP, capital, txCost, stopLoss) {
+    const closes = prices;
+    const smaShort = sma(closes, shortP);
+    const smaLong = sma(closes, longP);
+    const mom = momentum(closes, momP);
+
+    // volume moving average
+    const volMa = sma(volumes, 20);
+
+    // generate signals
+    const signals = [];
+    for (let i = 0; i < closes.length; i++) {
+        if (smaShort[i] === null || smaLong[i] === null || mom[i] === null) {
+            signals.push(0);
+        } else {
+            const maOk = smaShort[i] > smaLong[i];
+            const momOk = mom[i] > 0;
+            const volOk = volMa[i] === null || volumes[i] === 0 ? true : (volumes[i] / volMa[i]) > 0.8;
+            signals.push((maOk && momOk && volOk) ? 1 : 0);
+        }
+    }
+
+    // shift by 1 (no look-ahead)
+    const position = [0, ...signals.slice(0, -1)];
+
+    // backtest
+    let cash = capital;
+    let holdings = 0;
+    let entryPrice = 0;
+    const portfolioVals = [];
+    const buyHold = [];
+    const trades = [];
+    const firstPrice = closes[longP] || closes[0];
+
+    for (let i = 0; i < closes.length; i++) {
+        const price = closes[i];
+        const prevPos = i > 0 ? position[i - 1] : 0;
+        const curPos = position[i];
+        const trade = curPos - prevPos;
+
+        // stop loss check
+        if (holdings > 0 && entryPrice > 0) {
+            const ret = (price - entryPrice) / entryPrice;
+            if (ret <= stopLoss) {
+                const rev = holdings * price;
+                const fee = rev * txCost;
+                const pnl = rev - fee - (holdings * entryPrice);
+                cash = rev - fee;
+                trades.push({ date: dates[i], action: "STOP_LOSS", price: price.toFixed(2), pnl: pnl.toFixed(2) });
+                holdings = 0;
+                entryPrice = 0;
+            }
+        }
+
+        // buy
+        if (trade === 1 && holdings === 0 && cash > 0) {
+            const fee = cash * txCost;
+            holdings = (cash - fee) / price;
+            entryPrice = price;
+            cash = 0;
+            trades.push({ date: dates[i], action: "BUY", price: price.toFixed(2), pnl: "0.00" });
+        }
+        // sell
+        else if (trade === -1 && holdings > 0) {
+            const rev = holdings * price;
+            const fee = rev * txCost;
+            const pnl = rev - fee - (holdings * entryPrice);
+            cash = rev - fee;
+            trades.push({ date: dates[i], action: "SELL", price: price.toFixed(2), pnl: pnl.toFixed(2) });
+            holdings = 0;
+            entryPrice = 0;
+        }
+
+        portfolioVals.push(cash + holdings * price);
+        buyHold.push(capital * (price / firstPrice));
+    }
+
+    // metrics
+    const finalVal = portfolioVals[portfolioVals.length - 1];
+    const totalReturn = (finalVal / capital) - 1;
+    const nDays = portfolioVals.length;
+    const annualReturn = Math.pow(1 + totalReturn, 365 / nDays) - 1;
+
+    // daily returns
+    const dailyRet = [];
+    for (let i = 1; i < portfolioVals.length; i++) {
+        dailyRet.push((portfolioVals[i] / portfolioVals[i-1]) - 1);
+    }
+    const mean = dailyRet.reduce((a, b) => a + b, 0) / dailyRet.length;
+    const std = Math.sqrt(dailyRet.reduce((a, b) => a + (b - mean) ** 2, 0) / dailyRet.length);
+    const rfDaily = 0.04 / 365;
+    const sharpe = std > 0 ? Math.sqrt(365) * (mean - rfDaily) / std : 0;
+
+    // sortino
+    const downside = dailyRet.filter(r => r < rfDaily);
+    const downStd = downside.length > 0 ? Math.sqrt(downside.reduce((a, b) => a + (b - rfDaily) ** 2, 0) / downside.length) : 0.001;
+    const sortino = Math.sqrt(365) * (mean - rfDaily) / downStd;
+
+    // max drawdown
+    let peak = 0, maxDD = 0;
+    for (const v of portfolioVals) {
+        if (v > peak) peak = v;
+        const dd = (v - peak) / peak;
+        if (dd < maxDD) maxDD = dd;
+    }
+
+    // win rate
+    const sellTrades = trades.filter(t => t.action === "SELL" || t.action === "STOP_LOSS");
+    const wins = sellTrades.filter(t => parseFloat(t.pnl) > 0).length;
+    const winRate = sellTrades.length > 0 ? wins / sellTrades.length : 0;
+
+    // profit factor
+    const grossWin = sellTrades.filter(t => parseFloat(t.pnl) > 0).reduce((a, t) => a + parseFloat(t.pnl), 0);
+    const grossLoss = Math.abs(sellTrades.filter(t => parseFloat(t.pnl) <= 0).reduce((a, t) => a + parseFloat(t.pnl), 0));
+    const profitFactor = grossLoss > 0 ? grossWin / grossLoss : 0;
+
+    const bhReturn = (buyHold[buyHold.length - 1] / buyHold[0]) - 1;
+
+    return {
+        dates, closes, smaShort, smaLong, mom, portfolioVals, buyHold, trades,
+        metrics: {
+            "Total Return": (totalReturn * 100).toFixed(2) + "%",
+            "Annual Return": (annualReturn * 100).toFixed(2) + "%",
+            "Sharpe Ratio": sharpe.toFixed(3),
+            "Sortino Ratio": sortino.toFixed(3),
+            "Max Drawdown": (maxDD * 100).toFixed(2) + "%",
+            "Win Rate": (winRate * 100).toFixed(1) + "%",
+            "Profit Factor": profitFactor.toFixed(2),
+            "Total Trades": trades.length,
+            "Buy & Hold": (bhReturn * 100).toFixed(2) + "%",
+            "Final Value": "$" + finalVal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","),
+        },
+        buySignals: trades.filter(t => t.action === "BUY").map(t => t.date),
+        sellSignals: trades.filter(t => t.action === "SELL" || t.action === "STOP_LOSS").map(t => t.date),
+    };
+}
+
+function destroyCharts() {
+    for (const key in charts) { if (charts[key]) charts[key].destroy(); }
+    charts = {};
+}
+
+function renderMetrics(metrics) {
+    const div = document.getElementById("metricsDiv");
+    let html = "";
+    for (const [key, val] of Object.entries(metrics)) {
+        const v = String(val);
+        let cls = "";
+        if (v.includes("-")) cls = "neg";
+        else if (v.includes("%") || v.includes("$")) cls = "pos";
+        html += `<div class="metric"><div class="lbl">${key}</div><div class="val ${cls}">${v}</div></div>`;
+    }
+    div.innerHTML = html;
+}
+
+function renderEquityChart(dates, portfolio, buyHold) {
+    const ctx = document.getElementById("equityChart").getContext("2d");
+    charts.equity = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: dates,
+            datasets: [
+                { label: "Strategy", data: portfolio, borderColor: "#00d2ff", borderWidth: 2, pointRadius: 0, fill: false },
+                { label: "Buy & Hold", data: buyHold, borderColor: "#ff6b6b", borderWidth: 2, pointRadius: 0, fill: false },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: "#ccc" } } },
+            scales: {
+                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
+                y: { ticks: { color: "#888", callback: v => "$" + v.toLocaleString() }, grid: { color: "#222" } }
+            }
+        }
+    });
+}
+
+function renderPriceChart(dates, closes, smaShort, smaLong, buyDates, sellDates) {
+    const buyPoints = dates.map((d, i) => buyDates.includes(d) ? closes[i] : null);
+    const sellPoints = dates.map((d, i) => sellDates.includes(d) ? closes[i] : null);
+
+    const ctx = document.getElementById("priceChart").getContext("2d");
+    charts.price = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: dates,
+            datasets: [
+                { label: "Price", data: closes, borderColor: "#ffffff", borderWidth: 1.5, pointRadius: 0, fill: false },
+                { label: "SMA Short", data: smaShort, borderColor: "#00d2ff", borderWidth: 1.2, pointRadius: 0, fill: false },
+                { label: "SMA Long", data: smaLong, borderColor: "#ff9800", borderWidth: 1.2, pointRadius: 0, fill: false },
+                { label: "Buy", data: buyPoints, borderColor: "#00ff88", backgroundColor: "#00ff88", pointRadius: 6, pointStyle: "triangle", showLine: false },
+                { label: "Sell", data: sellPoints, borderColor: "#ff4444", backgroundColor: "#ff4444", pointRadius: 6, pointStyle: "triangle", rotation: 180, showLine: false },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: "#ccc" } } },
+            scales: {
+                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
+                y: { ticks: { color: "#888", callback: v => "$" + v.toLocaleString() }, grid: { color: "#222" } }
+            }
+        }
+    });
+}
+
+function renderMomentumChart(dates, mom) {
+    const colors = mom.map(v => v === null ? "#333" : v > 0 ? "#00ff88" : "#ff4444");
+    const ctx = document.getElementById("momentumChart").getContext("2d");
+    charts.momentum = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: dates,
+            datasets: [{ label: "Momentum %", data: mom, backgroundColor: colors, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
+                y: { ticks: { color: "#888" }, grid: { color: "#222" } }
+            }
+        }
+    });
+}
+
+function renderTrades(trades) {
+    const tbody = document.getElementById("tradesTbody");
+    let html = "";
+    for (const t of trades) {
+        const cls = t.action === "BUY" ? "buy" : "sell";
+        const pnl = parseFloat(t.pnl);
+        const pnlCls = pnl > 0 ? "buy" : pnl < 0 ? "sell" : "";
+        const dateStr = new Date(t.date).toLocaleDateString();
+        html += `<tr><td>${dateStr}</td><td class="${cls}">${t.action}</td><td>$${Number(t.price).toLocaleString()}</td><td class="${pnlCls}">$${t.pnl}</td></tr>`;
+    }
+    tbody.innerHTML = html;
+}
+
+async function runBacktest() {
+    const btn = document.getElementById("runBtn");
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+    const errDiv = document.getElementById("err");
+
+    btn.disabled = true;
+    loading.classList.add("show");
+    results.classList.remove("show");
+    errDiv.style.display = "none";
+    destroyCharts();
+
+    try {
+        const coin = document.getElementById("coin").value;
+        const days = parseInt(document.getElementById("days").value);
+        const shortMa = parseInt(document.getElementById("shortMa").value);
+        const longMa = parseInt(document.getElementById("longMa").value);
+        const capital = parseFloat(document.getElementById("capital").value);
+        const stopLoss = parseFloat(document.getElementById("stopLoss").value) / 100;
+
+        if (shortMa >= longMa) throw new Error("Short MA must be less than Long MA");
+        if (days < 90) throw new Error("Need at least 90 days of data");
+
+        const raw = await fetchData(coin, days);
+        const dates = raw.prices.map(p => new Date(p[0]));
+        const closes = raw.prices.map(p => p[1]);
+        const volumes = raw.total_volumes ? raw.total_volumes.map(v => v[1]) : closes.map(() => 0);
+
+        const result = runStrategy(closes, dates, volumes, shortMa, longMa, 14, capital, 0.001, stopLoss);
+
+        renderMetrics(result.metrics);
+        renderEquityChart(result.dates, result.portfolioVals, result.buyHold);
+        renderPriceChart(result.dates, result.closes, result.smaShort, result.smaLong, result.buySignals, result.sellSignals);
+        renderMomentumChart(result.dates, result.mom);
+        renderTrades(result.trades);
+
+        results.classList.add("show");
+    } catch (e) {
+        errDiv.textContent = e.message;
+        errDiv.style.display = "block";
+    } finally {
+        btn.disabled = false;
+        loading.classList.remove("show");
+    }
+}
+</script>
+</body>
+</html>
