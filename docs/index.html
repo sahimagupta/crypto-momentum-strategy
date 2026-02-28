@@ -3,442 +3,506 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Momentum Backtester</title>
+    <title>QMomentum - Crypto Strategy Lab</title>
     <style>
+        :root {
+            --bg: #060714; --surface: #0d1025; --surface2: #131736;
+            --border: #1e2348; --text: #c8cce0; --dim: #6b7094;
+            --accent: #4f8aff; --accent2: #7c5cfc; --green: #00e396;
+            --red: #ff4560; --orange: #feb019; --cyan: #00d4ff;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+        body { font-family: 'Inter', 'SF Pro', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
 
-        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 32px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 20px; color: #00d2ff; }
-        .header a { color: #888; text-decoration: none; font-size: 13px; }
-        .header a:hover { color: #00d2ff; }
+        .nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+        .nav-brand { display: flex; align-items: center; gap: 10px; }
+        .nav-brand .logo { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: white; }
+        .nav-brand h1 { font-size: 16px; color: white; font-weight: 600; }
+        .nav-brand span { font-size: 11px; color: var(--dim); }
+        .nav-links { display: flex; gap: 6px; }
+        .nav-links a { color: var(--dim); text-decoration: none; font-size: 12px; padding: 5px 10px; border-radius: 4px; transition: all 0.2s; }
+        .nav-links a:hover { background: var(--surface2); color: var(--text); }
 
-        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .tabs { display: flex; gap: 0; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+        .tab { padding: 10px 18px; font-size: 12px; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        .controls { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 18px; margin-bottom: 20px; }
-        .controls h2 { font-size: 14px; color: #00d2ff; margin-bottom: 14px; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
-        .form-group label { display: block; font-size: 10px; color: #888; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .form-group select, .form-group input { width: 100%; padding: 7px 10px; background: #16213e; border: 1px solid #333; border-radius: 4px; color: #e0e0e0; font-size: 13px; }
-        .form-group select:focus, .form-group input:focus { outline: none; border-color: #00d2ff; }
+        .main { max-width: 1200px; margin: 0 auto; padding: 16px 20px; }
 
-        .btn { padding: 7px 28px; background: linear-gradient(135deg, #00d2ff, #0090ff); color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
-        .btn:hover { opacity: 0.9; }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .panel-section { display: none; }
+        .panel-section.active { display: block; }
 
-        .loading { text-align: center; padding: 50px; display: none; }
-        .loading.show { display: block; }
-        .spinner { width: 36px; height: 36px; border: 3px solid #333; border-top: 3px solid #00d2ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .config-bar { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+        .cfg { display: flex; flex-direction: column; gap: 3px; }
+        .cfg label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
+        .cfg select, .cfg input { padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; min-width: 100px; }
+        .cfg select:focus, .cfg input:focus { outline: none; border-color: var(--accent); }
 
-        .error { background: #2d1515; border: 1px solid #ff4444; color: #ff6b6b; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: none; font-size: 13px; }
+        .btn-primary { padding: 6px 24px; background: var(--accent); color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background: #3d7aee; }
+        .btn-primary:disabled { opacity: 0.3; }
 
-        .results { display: none; }
-        .results.show { display: block; }
+        .btn-secondary { padding: 6px 14px; background: var(--surface2); color: var(--dim); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; cursor: pointer; }
+        .btn-secondary:hover { color: var(--text); border-color: var(--accent); }
 
-        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .metric { background: #1a1a2e; border: 1px solid #333; border-radius: 6px; padding: 12px; }
-        .metric .lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-        .metric .val { font-size: 18px; font-weight: 700; margin-top: 3px; color: #00d2ff; }
-        .metric .val.pos { color: #00ff88; }
-        .metric .val.neg { color: #ff4444; }
+        .status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px; font-size: 11px; color: var(--dim); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+        .status-dot.loading { background: var(--orange); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-        .chart-box { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
-        .chart-box h3 { font-size: 13px; color: #00d2ff; margin-bottom: 10px; }
+        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
+        .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+        .kpi .k-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
+        .kpi .k-val { font-size: 18px; font-weight: 700; margin-top: 2px; }
+        .kpi .k-sub { font-size: 10px; color: var(--dim); margin-top: 1px; }
+        .pos { color: var(--green); }
+        .neg { color: var(--red); }
+        .neutral { color: var(--accent); }
 
-        canvas { width: 100% !important; height: auto !important; }
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .chart-grid.full { grid-template-columns: 1fr; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .card h4 { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 500; }
+        canvas { width: 100% !important; }
 
-        .trades-box { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
-        .trades-box h3 { font-size: 13px; color: #00d2ff; margin-bottom: 10px; }
-        .trades-wrap { max-height: 350px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { text-align: left; padding: 6px 8px; border-bottom: 1px solid #333; color: #888; font-size: 10px; text-transform: uppercase; }
-        td { padding: 6px 8px; border-bottom: 1px solid #1f1f3a; }
-        tr:hover { background: #16213e; }
-        .buy { color: #00ff88; font-weight: 600; }
-        .sell { color: #ff4444; font-weight: 600; }
+        .tbl-wrap { max-height: 300px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; position: sticky; top: 0; background: var(--surface); }
+        td { padding: 5px 8px; border-bottom: 1px solid #0e1130; font-size: 12px; }
+        tr:hover td { background: var(--surface2); }
 
-        .footer { text-align: center; padding: 20px; color: #555; font-size: 12px; }
+        .empty { text-align: center; padding: 60px; color: var(--dim); }
+        .empty p { font-size: 14px; margin-bottom: 4px; }
+        .empty small { font-size: 11px; }
+
+        /* optimization tab */
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .heatmap-container { position: relative; overflow-x: auto; }
+        .heatmap-table { border-collapse: collapse; }
+        .heatmap-table td { width: 36px; height: 28px; text-align: center; font-size: 9px; font-weight: 600; border: 1px solid var(--bg); }
+        .heatmap-table th { font-size: 9px; padding: 4px; color: var(--dim); }
+
+        @media (max-width: 768px) {
+            .chart-grid { grid-template-columns: 1fr; }
+            .opt-grid { grid-template-columns: 1fr; }
+            .config-bar { flex-direction: column; }
+        }
+
+        .footer { text-align: center; padding: 16px; color: #333; font-size: 10px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div>
-            <h1>Crypto Momentum Backtester</h1>
-            <span style="color:#888;font-size:12px">MA Crossover + Momentum Filter</span>
+    <div class="nav">
+        <div class="nav-brand">
+            <div class="logo">Q</div>
+            <div><h1>QMomentum</h1><span>Quantitative Strategy Research Lab</span></div>
         </div>
-        <a href="https://github.com/sahimagupta/crypto-momentum-strategy" target="_blank">View Source on GitHub</a>
+        <div class="nav-links">
+            <a href="https://github.com/sahimagupta/crypto-momentum-strategy" target="_blank">Source Code</a>
+        </div>
     </div>
 
-    <div class="container">
-        <div class="controls">
-            <h2>Strategy Parameters</h2>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Coin</label>
-                    <select id="coin">
-                        <option value="bitcoin">Bitcoin (BTC)</option>
-                        <option value="ethereum">Ethereum (ETH)</option>
-                        <option value="solana">Solana (SOL)</option>
-                        <option value="cardano">Cardano (ADA)</option>
-                        <option value="ripple">Ripple (XRP)</option>
-                    </select>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('backtest')">Backtest</div>
+        <div class="tab" onclick="switchTab('optimize')">Optimization</div>
+        <div class="tab" onclick="switchTab('montecarlo')">Monte Carlo</div>
+    </div>
+
+    <div class="main">
+        <!-- BACKTEST TAB -->
+        <div class="panel-section active" id="panel-backtest">
+            <div class="config-bar">
+                <div class="cfg"><label>Asset</label><select id="coin"><option value="bitcoin">BTC/USD</option><option value="ethereum">ETH/USD</option><option value="solana">SOL/USD</option><option value="cardano">ADA/USD</option><option value="ripple">XRP/USD</option></select></div>
+                <div class="cfg"><label>Period</label><select id="days"><option value="180">6M</option><option value="365" selected>1Y</option><option value="730">2Y</option></select></div>
+                <div class="cfg"><label>Fast MA</label><input type="number" id="shortMa" value="20" min="5" max="100"></div>
+                <div class="cfg"><label>Slow MA</label><input type="number" id="longMa" value="50" min="10" max="200"></div>
+                <div class="cfg"><label>Capital</label><input type="number" id="capital" value="10000" min="100"></div>
+                <div class="cfg"><label>Stop Loss</label><select id="stopLoss"><option value="0">None</option><option value="-3">-3%</option><option value="-5" selected>-5%</option><option value="-10">-10%</option></select></div>
+                <div class="cfg"><label>&nbsp;</label><button class="btn-primary" id="runBtn" onclick="runBacktest()">Run</button></div>
+            </div>
+
+            <div class="status-bar" id="statusBar"><div class="status-dot" id="statusDot"></div><span id="statusText">Ready</span></div>
+
+            <div id="emptyState" class="empty"><p>Configure parameters and click Run</p><small>Data sourced from CoinGecko API</small></div>
+
+            <div id="resultsPanel" style="display:none;">
+                <div class="kpi-row" id="kpiRow"></div>
+                <div class="chart-grid full"><div class="card"><h4>Equity Curve</h4><canvas id="equityChart" height="80"></canvas></div></div>
+                <div class="chart-grid">
+                    <div class="card"><h4>Price & Signals</h4><canvas id="priceChart" height="90"></canvas></div>
+                    <div class="card"><h4>Momentum (ROC%)</h4><canvas id="momChart" height="90"></canvas></div>
                 </div>
-                <div class="form-group">
-                    <label>Lookback (days)</label>
-                    <input type="number" id="days" value="365" min="90" max="730">
+                <div class="chart-grid">
+                    <div class="card"><h4>Rolling Sharpe (60d)</h4><canvas id="rollingChart" height="90"></canvas></div>
+                    <div class="card"><h4>Return Distribution</h4><canvas id="distChart" height="90"></canvas></div>
                 </div>
-                <div class="form-group">
-                    <label>Short MA</label>
-                    <input type="number" id="shortMa" value="20" min="5" max="100">
-                </div>
-                <div class="form-group">
-                    <label>Long MA</label>
-                    <input type="number" id="longMa" value="50" min="10" max="200">
-                </div>
-                <div class="form-group">
-                    <label>Capital ($)</label>
-                    <input type="number" id="capital" value="10000" min="100">
-                </div>
-                <div class="form-group">
-                    <label>Stop Loss (%)</label>
-                    <input type="number" id="stopLoss" value="-5" min="-50" max="0">
-                </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <button class="btn" id="runBtn" onclick="runBacktest()">Run Backtest</button>
+                <div class="card" style="margin-bottom:16px"><h4>Trade Log</h4><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Side</th><th>Price</th><th>P&L</th><th>Cumulative</th></tr></thead><tbody id="tbody"></tbody></table></div></div>
+            </div>
+        </div>
+
+        <!-- OPTIMIZATION TAB -->
+        <div class="panel-section" id="panel-optimize">
+            <div class="config-bar">
+                <div class="cfg"><label>Asset</label><select id="optCoin"><option value="bitcoin">BTC/USD</option><option value="ethereum">ETH/USD</option><option value="solana">SOL/USD</option></select></div>
+                <div class="cfg"><label>Period</label><select id="optDays"><option value="365" selected>1Y</option><option value="730">2Y</option></select></div>
+                <div class="cfg"><label>Fast MA Range</label><input type="text" id="fastRange" value="5,10,15,20,30" style="min-width:140px"></div>
+                <div class="cfg"><label>Slow MA Range</label><input type="text" id="slowRange" value="30,40,50,60,80,100" style="min-width:140px"></div>
+                <div class="cfg"><label>&nbsp;</label><button class="btn-primary" id="optBtn" onclick="runOptimization()">Optimize</button></div>
+            </div>
+            <div id="optEmpty" class="empty"><p>Parameter Optimization</p><small>Grid search across MA combinations to find optimal parameters</small></div>
+            <div id="optResults" style="display:none;">
+                <div class="card" style="margin-bottom:12px"><h4>Best Parameters</h4><div id="optBest" style="padding:8px;font-size:13px;"></div></div>
+                <div class="opt-grid">
+                    <div class="card"><h4>Sharpe Ratio Heatmap</h4><div class="heatmap-container" id="sharpeHeatmap"></div></div>
+                    <div class="card"><h4>Total Return Heatmap</h4><div class="heatmap-container" id="returnHeatmap"></div></div>
                 </div>
             </div>
         </div>
 
-        <div class="error" id="err"></div>
-        <div class="loading" id="loading"><div class="spinner"></div><p>Fetching data from CoinGecko...</p></div>
-
-        <div class="results" id="results">
-            <div class="metrics" id="metricsDiv"></div>
-            <div class="chart-box"><h3>Equity Curve: Strategy vs Buy &amp; Hold</h3><canvas id="equityChart"></canvas></div>
-            <div class="chart-box"><h3>Price &amp; Trading Signals</h3><canvas id="priceChart"></canvas></div>
-            <div class="chart-box"><h3>Momentum (Rate of Change %)</h3><canvas id="momentumChart"></canvas></div>
-            <div class="trades-box"><h3>Trade Log</h3><div class="trades-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Price</th><th>P&amp;L</th></tr></thead><tbody id="tradesTbody"></tbody></table></div></div>
+        <!-- MONTE CARLO TAB -->
+        <div class="panel-section" id="panel-montecarlo">
+            <div class="config-bar">
+                <div class="cfg"><label>Simulations</label><select id="mcSims"><option value="100">100</option><option value="500" selected>500</option><option value="1000">1000</option></select></div>
+                <div class="cfg"><label>&nbsp;</label><button class="btn-primary" id="mcBtn" onclick="runMonteCarlo()">Simulate</button></div>
+            </div>
+            <div id="mcEmpty" class="empty"><p>Monte Carlo Simulation</p><small>Run backtest first, then simulate random return paths to estimate risk</small></div>
+            <div id="mcResults" style="display:none;">
+                <div class="kpi-row" id="mcKpi"></div>
+                <div class="chart-grid full"><div class="card"><h4>Simulated Equity Paths</h4><canvas id="mcChart" height="80"></canvas></div></div>
+                <div class="card"><h4>Final Value Distribution</h4><canvas id="mcDistChart" height="60"></canvas></div>
+            </div>
         </div>
-
-        <div class="footer">Data from CoinGecko Free API | Strategy for educational purposes only</div>
     </div>
 
+    <div class="footer">QMomentum Strategy Research Lab &middot; Data from CoinGecko &middot; For research purposes only</div>
+
 <script>
-let charts = {};
+let charts = {}, lastResult = null;
 
-async function fetchData(coinId, days) {
-    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`CoinGecko API error: ${resp.status}. Try again in a minute.`);
-    return await resp.json();
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['backtest','optimize','montecarlo'][i] === name));
+    document.querySelectorAll('.panel-section').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
 }
 
-function sma(arr, period) {
-    const result = [];
-    for (let i = 0; i < arr.length; i++) {
-        if (i < period - 1) { result.push(null); continue; }
-        let sum = 0;
-        for (let j = i - period + 1; j <= i; j++) sum += arr[j];
-        result.push(sum / period);
-    }
-    return result;
+function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
+function destroyAll() { Object.keys(charts).forEach(destroyChart); }
+
+const chartDefaults = { responsive: true, plugins: { legend: { labels: { color: '#777', font: { size: 10 } } } },
+    scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#444', font: { size: 9 } }, grid: { color: '#1a1d3a' } },
+              y: { ticks: { color: '#444', font: { size: 9 } }, grid: { color: '#1a1d3a' } } } };
+
+async function fetchData(coin, days) {
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${coin}/market_chart?vs_currency=usd&days=${days}&interval=daily`);
+    if (!r.ok) throw new Error(`API error ${r.status}. Rate limited? Wait 60s.`);
+    return r.json();
 }
 
-function momentum(arr, period) {
-    const result = [];
-    for (let i = 0; i < arr.length; i++) {
-        if (i < period || arr[i - period] === 0) { result.push(null); continue; }
-        result.push(((arr[i] - arr[i - period]) / arr[i - period]) * 100);
-    }
-    return result;
-}
+function sma(a, p) { return a.map((_, i) => i < p-1 ? null : a.slice(i-p+1, i+1).reduce((s,v) => s+v, 0) / p); }
+function roc(a, p) { return a.map((v, i) => i < p ? null : ((v - a[i-p]) / a[i-p]) * 100); }
 
-function runStrategy(prices, dates, volumes, shortP, longP, momP, capital, txCost, stopLoss) {
-    const closes = prices;
-    const smaShort = sma(closes, shortP);
-    const smaLong = sma(closes, longP);
-    const mom = momentum(closes, momP);
+function simulate(closes, dates, vols, sP, lP, cap, sl) {
+    const sS = sma(closes, sP), sL = sma(closes, lP), mom = roc(closes, 14);
+    const vMa = sma(vols, 20);
+    const sig = closes.map((_, i) => (sS[i] && sL[i] && mom[i] !== null && sS[i] > sL[i] && mom[i] > 0 && (!vMa[i] || vols[i]/vMa[i] > 0.8)) ? 1 : 0);
+    const pos = [0, ...sig.slice(0, -1)];
 
-    // volume moving average
-    const volMa = sma(volumes, 20);
-
-    // generate signals
-    const signals = [];
-    for (let i = 0; i < closes.length; i++) {
-        if (smaShort[i] === null || smaLong[i] === null || mom[i] === null) {
-            signals.push(0);
-        } else {
-            const maOk = smaShort[i] > smaLong[i];
-            const momOk = mom[i] > 0;
-            const volOk = volMa[i] === null || volumes[i] === 0 ? true : (volumes[i] / volMa[i]) > 0.8;
-            signals.push((maOk && momOk && volOk) ? 1 : 0);
-        }
-    }
-
-    // shift by 1 (no look-ahead)
-    const position = [0, ...signals.slice(0, -1)];
-
-    // backtest
-    let cash = capital;
-    let holdings = 0;
-    let entryPrice = 0;
-    const portfolioVals = [];
-    const buyHold = [];
-    const trades = [];
-    const firstPrice = closes[longP] || closes[0];
+    let cash = cap, hold = 0, ep = 0;
+    const pv = [], bh = [], trades = [], dailyRet = [];
 
     for (let i = 0; i < closes.length; i++) {
-        const price = closes[i];
-        const prevPos = i > 0 ? position[i - 1] : 0;
-        const curPos = position[i];
-        const trade = curPos - prevPos;
-
-        // stop loss check
-        if (holdings > 0 && entryPrice > 0) {
-            const ret = (price - entryPrice) / entryPrice;
-            if (ret <= stopLoss) {
-                const rev = holdings * price;
-                const fee = rev * txCost;
-                const pnl = rev - fee - (holdings * entryPrice);
-                cash = rev - fee;
-                trades.push({ date: dates[i], action: "STOP_LOSS", price: price.toFixed(2), pnl: pnl.toFixed(2) });
-                holdings = 0;
-                entryPrice = 0;
-            }
+        const p = closes[i], tr = pos[i] - (i > 0 ? pos[i-1] : 0);
+        if (hold > 0 && ep > 0 && sl < 0 && (p - ep)/ep <= sl) {
+            const rev = hold * p, fee = rev * 0.001, pnl = rev - fee - hold * ep;
+            cash = rev - fee; trades.push({ date: dates[i], action: 'STOP', price: p, pnl }); hold = 0; ep = 0;
         }
-
-        // buy
-        if (trade === 1 && holdings === 0 && cash > 0) {
-            const fee = cash * txCost;
-            holdings = (cash - fee) / price;
-            entryPrice = price;
-            cash = 0;
-            trades.push({ date: dates[i], action: "BUY", price: price.toFixed(2), pnl: "0.00" });
-        }
-        // sell
-        else if (trade === -1 && holdings > 0) {
-            const rev = holdings * price;
-            const fee = rev * txCost;
-            const pnl = rev - fee - (holdings * entryPrice);
-            cash = rev - fee;
-            trades.push({ date: dates[i], action: "SELL", price: price.toFixed(2), pnl: pnl.toFixed(2) });
-            holdings = 0;
-            entryPrice = 0;
-        }
-
-        portfolioVals.push(cash + holdings * price);
-        buyHold.push(capital * (price / firstPrice));
+        if (tr === 1 && hold === 0 && cash > 0) { const fee = cash * 0.001; hold = (cash - fee) / p; ep = p; cash = 0; trades.push({ date: dates[i], action: 'BUY', price: p, pnl: 0 }); }
+        else if (tr === -1 && hold > 0) { const rev = hold * p, fee = rev * 0.001, pnl = rev - fee - hold * ep; cash = rev - fee; trades.push({ date: dates[i], action: 'SELL', price: p, pnl }); hold = 0; ep = 0; }
+        const v = cash + hold * p; pv.push(v); bh.push(cap * p / closes[0]);
+        if (i > 0) dailyRet.push(pv[i] / pv[i-1] - 1);
     }
 
-    // metrics
-    const finalVal = portfolioVals[portfolioVals.length - 1];
-    const totalReturn = (finalVal / capital) - 1;
-    const nDays = portfolioVals.length;
-    const annualReturn = Math.pow(1 + totalReturn, 365 / nDays) - 1;
+    const fin = pv[pv.length-1], totRet = fin/cap - 1, annRet = Math.pow(1+totRet, 365/pv.length) - 1;
+    const mu = dailyRet.reduce((a,b)=>a+b,0)/dailyRet.length;
+    const std = Math.sqrt(dailyRet.reduce((a,b)=>a+(b-mu)**2,0)/dailyRet.length);
+    const rf = 0.04/365;
+    const sharpe = std > 0 ? Math.sqrt(365)*(mu-rf)/std : 0;
+    const ds = dailyRet.filter(r=>r<rf), dsStd = ds.length ? Math.sqrt(ds.reduce((a,b)=>a+(b-rf)**2,0)/ds.length) : 0.001;
+    const sortino = Math.sqrt(365)*(mu-rf)/dsStd;
+    let pk=0, mdd=0; pv.forEach(v => { if(v>pk)pk=v; const d=(v-pk)/pk; if(d<mdd)mdd=d; });
+    const sells = trades.filter(t=>t.action!=='BUY'), wins = sells.filter(t=>t.pnl>0).length;
+    const wr = sells.length ? wins/sells.length : 0;
+    const gw = sells.filter(t=>t.pnl>0).reduce((a,t)=>a+t.pnl,0);
+    const gl = Math.abs(sells.filter(t=>t.pnl<=0).reduce((a,t)=>a+t.pnl,0));
+    const pf = gl > 0 ? gw/gl : 0;
+    const bhRet = bh[bh.length-1]/bh[0]-1;
+    const vol = std * Math.sqrt(365);
 
-    // daily returns
-    const dailyRet = [];
-    for (let i = 1; i < portfolioVals.length; i++) {
-        dailyRet.push((portfolioVals[i] / portfolioVals[i-1]) - 1);
-    }
-    const mean = dailyRet.reduce((a, b) => a + b, 0) / dailyRet.length;
-    const std = Math.sqrt(dailyRet.reduce((a, b) => a + (b - mean) ** 2, 0) / dailyRet.length);
-    const rfDaily = 0.04 / 365;
-    const sharpe = std > 0 ? Math.sqrt(365) * (mean - rfDaily) / std : 0;
-
-    // sortino
-    const downside = dailyRet.filter(r => r < rfDaily);
-    const downStd = downside.length > 0 ? Math.sqrt(downside.reduce((a, b) => a + (b - rfDaily) ** 2, 0) / downside.length) : 0.001;
-    const sortino = Math.sqrt(365) * (mean - rfDaily) / downStd;
-
-    // max drawdown
-    let peak = 0, maxDD = 0;
-    for (const v of portfolioVals) {
-        if (v > peak) peak = v;
-        const dd = (v - peak) / peak;
-        if (dd < maxDD) maxDD = dd;
+    // rolling sharpe 60d
+    const rollSharpe = [];
+    for (let i = 0; i < dailyRet.length; i++) {
+        if (i < 59) { rollSharpe.push(null); continue; }
+        const sl = dailyRet.slice(i-59, i+1);
+        const m = sl.reduce((a,b)=>a+b,0)/60;
+        const s = Math.sqrt(sl.reduce((a,b)=>a+(b-m)**2,0)/60);
+        rollSharpe.push(s > 0 ? Math.sqrt(365)*(m-rf)/s : 0);
     }
 
-    // win rate
-    const sellTrades = trades.filter(t => t.action === "SELL" || t.action === "STOP_LOSS");
-    const wins = sellTrades.filter(t => parseFloat(t.pnl) > 0).length;
-    const winRate = sellTrades.length > 0 ? wins / sellTrades.length : 0;
-
-    // profit factor
-    const grossWin = sellTrades.filter(t => parseFloat(t.pnl) > 0).reduce((a, t) => a + parseFloat(t.pnl), 0);
-    const grossLoss = Math.abs(sellTrades.filter(t => parseFloat(t.pnl) <= 0).reduce((a, t) => a + parseFloat(t.pnl), 0));
-    const profitFactor = grossLoss > 0 ? grossWin / grossLoss : 0;
-
-    const bhReturn = (buyHold[buyHold.length - 1] / buyHold[0]) - 1;
-
-    return {
-        dates, closes, smaShort, smaLong, mom, portfolioVals, buyHold, trades,
-        metrics: {
-            "Total Return": (totalReturn * 100).toFixed(2) + "%",
-            "Annual Return": (annualReturn * 100).toFixed(2) + "%",
-            "Sharpe Ratio": sharpe.toFixed(3),
-            "Sortino Ratio": sortino.toFixed(3),
-            "Max Drawdown": (maxDD * 100).toFixed(2) + "%",
-            "Win Rate": (winRate * 100).toFixed(1) + "%",
-            "Profit Factor": profitFactor.toFixed(2),
-            "Total Trades": trades.length,
-            "Buy & Hold": (bhReturn * 100).toFixed(2) + "%",
-            "Final Value": "$" + finalVal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","),
-        },
-        buySignals: trades.filter(t => t.action === "BUY").map(t => t.date),
-        sellSignals: trades.filter(t => t.action === "SELL" || t.action === "STOP_LOSS").map(t => t.date),
+    return { dates, closes, sS, sL, mom, pv, bh, trades, dailyRet, rollSharpe,
+        buys: trades.filter(t=>t.action==='BUY').map(t=>t.date),
+        sells: trades.filter(t=>t.action!=='BUY').map(t=>t.date),
+        m: { 'Total Return': (totRet*100).toFixed(2)+'%', 'Annual Return': (annRet*100).toFixed(2)+'%',
+             'Sharpe': sharpe.toFixed(3), 'Sortino': sortino.toFixed(3), 'Max Drawdown': (mdd*100).toFixed(2)+'%',
+             'Volatility': (vol*100).toFixed(1)+'%', 'Win Rate': (wr*100).toFixed(0)+'%',
+             'Profit Factor': pf.toFixed(2), 'Trades': trades.length, 'B&H Return': (bhRet*100).toFixed(2)+'%',
+             'Final Value': '$'+fin.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,','),
+             'Alpha': ((totRet-bhRet)*100).toFixed(2)+'%' }
     };
 }
 
-function destroyCharts() {
-    for (const key in charts) { if (charts[key]) charts[key].destroy(); }
-    charts = {};
+function setStatus(text, loading=false) {
+    document.getElementById('statusText').textContent = text;
+    document.getElementById('statusDot').classList.toggle('loading', loading);
 }
 
-function renderMetrics(metrics) {
-    const div = document.getElementById("metricsDiv");
-    let html = "";
-    for (const [key, val] of Object.entries(metrics)) {
-        const v = String(val);
-        let cls = "";
-        if (v.includes("-")) cls = "neg";
-        else if (v.includes("%") || v.includes("$")) cls = "pos";
-        html += `<div class="metric"><div class="lbl">${key}</div><div class="val ${cls}">${v}</div></div>`;
-    }
-    div.innerHTML = html;
+function renderKpi(metrics) {
+    const el = document.getElementById('kpiRow');
+    el.innerHTML = Object.entries(metrics).map(([k,v]) => {
+        const s = String(v), cls = s.includes('-') ? 'neg' : (s.includes('%')||s.includes('$')) ? 'pos' : 'neutral';
+        return `<div class="kpi"><div class="k-label">${k}</div><div class="k-val ${cls}">${v}</div></div>`;
+    }).join('');
 }
 
-function renderEquityChart(dates, portfolio, buyHold) {
-    const ctx = document.getElementById("equityChart").getContext("2d");
-    charts.equity = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: dates,
-            datasets: [
-                { label: "Strategy", data: portfolio, borderColor: "#00d2ff", borderWidth: 2, pointRadius: 0, fill: false },
-                { label: "Buy & Hold", data: buyHold, borderColor: "#ff6b6b", borderWidth: 2, pointRadius: 0, fill: false },
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { labels: { color: "#ccc" } } },
-            scales: {
-                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
-                y: { ticks: { color: "#888", callback: v => "$" + v.toLocaleString() }, grid: { color: "#222" } }
-            }
-        }
-    });
-}
-
-function renderPriceChart(dates, closes, smaShort, smaLong, buyDates, sellDates) {
-    const buyPoints = dates.map((d, i) => buyDates.includes(d) ? closes[i] : null);
-    const sellPoints = dates.map((d, i) => sellDates.includes(d) ? closes[i] : null);
-
-    const ctx = document.getElementById("priceChart").getContext("2d");
-    charts.price = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: dates,
-            datasets: [
-                { label: "Price", data: closes, borderColor: "#ffffff", borderWidth: 1.5, pointRadius: 0, fill: false },
-                { label: "SMA Short", data: smaShort, borderColor: "#00d2ff", borderWidth: 1.2, pointRadius: 0, fill: false },
-                { label: "SMA Long", data: smaLong, borderColor: "#ff9800", borderWidth: 1.2, pointRadius: 0, fill: false },
-                { label: "Buy", data: buyPoints, borderColor: "#00ff88", backgroundColor: "#00ff88", pointRadius: 6, pointStyle: "triangle", showLine: false },
-                { label: "Sell", data: sellPoints, borderColor: "#ff4444", backgroundColor: "#ff4444", pointRadius: 6, pointStyle: "triangle", rotation: 180, showLine: false },
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { labels: { color: "#ccc" } } },
-            scales: {
-                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
-                y: { ticks: { color: "#888", callback: v => "$" + v.toLocaleString() }, grid: { color: "#222" } }
-            }
-        }
-    });
-}
-
-function renderMomentumChart(dates, mom) {
-    const colors = mom.map(v => v === null ? "#333" : v > 0 ? "#00ff88" : "#ff4444");
-    const ctx = document.getElementById("momentumChart").getContext("2d");
-    charts.momentum = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: dates,
-            datasets: [{ label: "Momentum %", data: mom, backgroundColor: colors, borderWidth: 0 }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { type: "time", time: { unit: "month" }, ticks: { color: "#888" }, grid: { color: "#222" } },
-                y: { ticks: { color: "#888" }, grid: { color: "#222" } }
-            }
-        }
-    });
-}
-
-function renderTrades(trades) {
-    const tbody = document.getElementById("tradesTbody");
-    let html = "";
-    for (const t of trades) {
-        const cls = t.action === "BUY" ? "buy" : "sell";
-        const pnl = parseFloat(t.pnl);
-        const pnlCls = pnl > 0 ? "buy" : pnl < 0 ? "sell" : "";
-        const dateStr = new Date(t.date).toLocaleDateString();
-        html += `<tr><td>${dateStr}</td><td class="${cls}">${t.action}</td><td>$${Number(t.price).toLocaleString()}</td><td class="${pnlCls}">$${t.pnl}</td></tr>`;
-    }
-    tbody.innerHTML = html;
-}
+function mkChart(id, cfg) { destroyChart(id); charts[id] = new Chart(document.getElementById(id).getContext('2d'), cfg); }
 
 async function runBacktest() {
-    const btn = document.getElementById("runBtn");
-    const loading = document.getElementById("loading");
-    const results = document.getElementById("results");
-    const errDiv = document.getElementById("err");
-
-    btn.disabled = true;
-    loading.classList.add("show");
-    results.classList.remove("show");
-    errDiv.style.display = "none";
-    destroyCharts();
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true; setStatus('Fetching market data...', true);
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultsPanel').style.display = 'none';
 
     try {
-        const coin = document.getElementById("coin").value;
-        const days = parseInt(document.getElementById("days").value);
-        const shortMa = parseInt(document.getElementById("shortMa").value);
-        const longMa = parseInt(document.getElementById("longMa").value);
-        const capital = parseFloat(document.getElementById("capital").value);
-        const stopLoss = parseFloat(document.getElementById("stopLoss").value) / 100;
+        const coin = document.getElementById('coin').value;
+        const days = +document.getElementById('days').value;
+        const sP = +document.getElementById('shortMa').value;
+        const lP = +document.getElementById('longMa').value;
+        const cap = +document.getElementById('capital').value;
+        const sl = +document.getElementById('stopLoss').value / 100;
+        if (sP >= lP) throw new Error('Fast MA must be < Slow MA');
 
-        if (shortMa >= longMa) throw new Error("Short MA must be less than Long MA");
-        if (days < 90) throw new Error("Need at least 90 days of data");
-
+        setStatus('Fetching ' + coin.toUpperCase() + ' data...', true);
         const raw = await fetchData(coin, days);
         const dates = raw.prices.map(p => new Date(p[0]));
         const closes = raw.prices.map(p => p[1]);
-        const volumes = raw.total_volumes ? raw.total_volumes.map(v => v[1]) : closes.map(() => 0);
+        const vols = raw.total_volumes ? raw.total_volumes.map(v=>v[1]) : closes.map(()=>0);
 
-        const result = runStrategy(closes, dates, volumes, shortMa, longMa, 14, capital, 0.001, stopLoss);
+        setStatus('Running strategy...', true);
+        const r = simulate(closes, dates, vols, sP, lP, cap, sl);
+        lastResult = r;
 
-        renderMetrics(result.metrics);
-        renderEquityChart(result.dates, result.portfolioVals, result.buyHold);
-        renderPriceChart(result.dates, result.closes, result.smaShort, result.smaLong, result.buySignals, result.sellSignals);
-        renderMomentumChart(result.dates, result.mom);
-        renderTrades(result.trades);
+        renderKpi(r.m);
 
-        results.classList.add("show");
-    } catch (e) {
-        errDiv.textContent = e.message;
-        errDiv.style.display = "block";
-    } finally {
-        btn.disabled = false;
-        loading.classList.remove("show");
-    }
+        // equity
+        mkChart('equityChart', { type:'line', data: { labels: r.dates, datasets: [
+            { label:'Strategy', data:r.pv, borderColor:'#4f8aff', borderWidth:2, pointRadius:0, fill:false },
+            { label:'Buy & Hold', data:r.bh, borderColor:'#ff4560', borderWidth:1.5, pointRadius:0, fill:false, borderDash:[4,3] }
+        ]}, options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, callback: v=>'$'+v.toLocaleString() } } } } });
+
+        // price + signals
+        const bp = r.dates.map((d,i)=>r.buys.includes(d)?r.closes[i]:null);
+        const sp = r.dates.map((d,i)=>r.sells.includes(d)?r.closes[i]:null);
+        mkChart('priceChart', { type:'line', data: { labels: r.dates, datasets: [
+            { label:'Price', data:r.closes, borderColor:'#ccc', borderWidth:1, pointRadius:0, fill:false },
+            { label:'Fast MA', data:r.sS, borderColor:'#4f8aff', borderWidth:1, pointRadius:0, fill:false },
+            { label:'Slow MA', data:r.sL, borderColor:'#ff9800', borderWidth:1, pointRadius:0, fill:false },
+            { label:'Buy', data:bp, borderColor:'#00e396', backgroundColor:'#00e396', pointRadius:5, pointStyle:'triangle', showLine:false },
+            { label:'Sell', data:sp, borderColor:'#ff4560', backgroundColor:'#ff4560', pointRadius:5, pointStyle:'triangle', rotation:180, showLine:false },
+        ]}, options: chartDefaults });
+
+        // momentum
+        mkChart('momChart', { type:'bar', data: { labels: r.dates, datasets: [
+            { data:r.mom, backgroundColor:r.mom.map(v=>v===null?'transparent':v>0?'#00e39666':'#ff456066'), borderWidth:0 }
+        ]}, options: { ...chartDefaults, plugins: { legend: { display:false } } } });
+
+        // rolling sharpe
+        const rsDates = r.dates.slice(1);
+        mkChart('rollingChart', { type:'line', data: { labels: rsDates, datasets: [
+            { label:'Rolling Sharpe', data:r.rollSharpe, borderColor:'#7c5cfc', borderWidth:1.5, pointRadius:0, fill:{ target:'origin', above:'#7c5cfc15', below:'#ff456015' } },
+            { label:'Zero', data:rsDates.map(()=>0), borderColor:'#333', borderWidth:1, borderDash:[3,3], pointRadius:0 }
+        ]}, options: chartDefaults });
+
+        // return distribution
+        const bins = 40, minR = Math.min(...r.dailyRet)*100, maxR = Math.max(...r.dailyRet)*100;
+        const step = (maxR-minR)/bins, hist = Array(bins).fill(0);
+        r.dailyRet.forEach(v => { const b = Math.min(Math.floor((v*100-minR)/step), bins-1); if(b>=0) hist[b]++; });
+        const labels = hist.map((_,i) => (minR+i*step).toFixed(1)+'%');
+        mkChart('distChart', { type:'bar', data: { labels, datasets: [
+            { data:hist, backgroundColor:hist.map((_,i)=>(minR+i*step)<0?'#ff456066':'#00e39666'), borderWidth:0 }
+        ]}, options: { ...chartDefaults, plugins:{ legend:{display:false} }, scales: { x:{ type:'category', ticks:{color:'#444',font:{size:8},maxTicksLimit:10}, grid:{color:'#1a1d3a'} }, y:{ticks:{color:'#444',font:{size:9}},grid:{color:'#1a1d3a'}} } } });
+
+        // trades table
+        let cumPnl = 0;
+        document.getElementById('tbody').innerHTML = r.trades.map(t => {
+            if (t.action !== 'BUY') cumPnl += t.pnl;
+            const cls = t.action === 'BUY' ? 'pos' : 'neg';
+            const pCls = t.pnl > 0 ? 'pos' : t.pnl < 0 ? 'neg' : '';
+            return `<tr><td>${t.date.toLocaleDateString()}</td><td class="${cls}">${t.action}</td><td>$${t.price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</td><td class="${pCls}">$${t.pnl.toFixed(2)}</td><td class="${cumPnl>=0?'pos':'neg'}">$${cumPnl.toFixed(2)}</td></tr>`;
+        }).join('');
+
+        document.getElementById('resultsPanel').style.display = 'block';
+        setStatus(`Done. ${r.dates.length} data points, ${r.trades.length} trades.`);
+    } catch(e) {
+        setStatus('Error: ' + e.message); document.getElementById('emptyState').style.display = 'block';
+    } finally { btn.disabled = false; }
+}
+
+async function runOptimization() {
+    const btn = document.getElementById('optBtn');
+    btn.disabled = true;
+    document.getElementById('optEmpty').style.display = 'none';
+
+    try {
+        const coin = document.getElementById('optCoin').value;
+        const days = +document.getElementById('optDays').value;
+        const fastVals = document.getElementById('fastRange').value.split(',').map(Number);
+        const slowVals = document.getElementById('slowRange').value.split(',').map(Number);
+
+        const raw = await fetchData(coin, days);
+        const dates = raw.prices.map(p=>new Date(p[0]));
+        const closes = raw.prices.map(p=>p[1]);
+        const vols = raw.total_volumes ? raw.total_volumes.map(v=>v[1]) : closes.map(()=>0);
+
+        const sharpeMap = {}, retMap = {};
+        let bestSharpe = -999, bestParams = '';
+
+        for (const f of fastVals) {
+            for (const s of slowVals) {
+                if (f >= s) continue;
+                const r = simulate(closes, dates, vols, f, s, 10000, -0.05);
+                const sh = parseFloat(r.m['Sharpe']);
+                const ret = parseFloat(r.m['Total Return']);
+                const key = f+','+s;
+                sharpeMap[key] = sh; retMap[key] = ret;
+                if (sh > bestSharpe) { bestSharpe = sh; bestParams = `Fast=${f}, Slow=${s} (Sharpe: ${sh.toFixed(3)}, Return: ${ret}%)`; }
+            }
+        }
+
+        document.getElementById('optBest').innerHTML = `<span class="pos" style="font-size:15px;font-weight:700">${bestParams}</span>`;
+
+        // render heatmaps
+        renderHeatmap('sharpeHeatmap', fastVals, slowVals, sharpeMap, 'Sharpe');
+        renderHeatmap('returnHeatmap', fastVals, slowVals, retMap, 'Return%');
+
+        document.getElementById('optResults').style.display = 'block';
+    } catch(e) { alert(e.message); }
+    finally { btn.disabled = false; }
+}
+
+function renderHeatmap(elId, rows, cols, data, label) {
+    const el = document.getElementById(elId);
+    const vals = Object.values(data).filter(v=>!isNaN(v));
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+
+    let html = '<table class="heatmap-table"><tr><th>'+label+'</th>';
+    cols.forEach(c => html += '<th>'+c+'</th>');
+    html += '</tr>';
+
+    rows.forEach(r => {
+        html += '<tr><th>'+r+'</th>';
+        cols.forEach(c => {
+            if (r >= c) { html += '<td style="background:#111">-</td>'; return; }
+            const v = data[r+','+c];
+            if (v === undefined) { html += '<td>-</td>'; return; }
+            const t = mx !== mn ? (v - mn) / (mx - mn) : 0.5;
+            const color = v >= 0 ? `rgba(0,227,150,${0.15+t*0.7})` : `rgba(255,69,96,${0.15+(1-t)*0.7})`;
+            html += `<td style="background:${color};color:white">${typeof v==='number'?v.toFixed(2):v}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</table>';
+    el.innerHTML = html;
+}
+
+async function runMonteCarlo() {
+    if (!lastResult) { alert('Run a backtest first!'); return; }
+    const btn = document.getElementById('mcBtn');
+    btn.disabled = true; document.getElementById('mcEmpty').style.display = 'none';
+
+    try {
+        const nSims = +document.getElementById('mcSims').value;
+        const dr = lastResult.dailyRet;
+        const cap = +document.getElementById('capital').value || 10000;
+        const nDays = dr.length;
+
+        const paths = [];
+        const finals = [];
+
+        for (let s = 0; s < nSims; s++) {
+            const path = [cap];
+            let val = cap;
+            for (let d = 0; d < nDays; d++) {
+                const randIdx = Math.floor(Math.random() * dr.length);
+                val *= (1 + dr[randIdx]);
+                path.push(val);
+            }
+            paths.push(path);
+            finals.push(val);
+        }
+
+        finals.sort((a,b) => a-b);
+        const p5 = finals[Math.floor(nSims*0.05)];
+        const p25 = finals[Math.floor(nSims*0.25)];
+        const p50 = finals[Math.floor(nSims*0.50)];
+        const p75 = finals[Math.floor(nSims*0.75)];
+        const p95 = finals[Math.floor(nSims*0.95)];
+        const probLoss = finals.filter(v=>v<cap).length/nSims;
+
+        document.getElementById('mcKpi').innerHTML = [
+            ['5th Pctl', '$'+p5.toFixed(0), p5<cap?'neg':'pos'],
+            ['25th Pctl', '$'+p25.toFixed(0), p25<cap?'neg':'pos'],
+            ['Median', '$'+p50.toFixed(0), p50<cap?'neg':'pos'],
+            ['75th Pctl', '$'+p75.toFixed(0), 'pos'],
+            ['95th Pctl', '$'+p95.toFixed(0), 'pos'],
+            ['P(Loss)', (probLoss*100).toFixed(1)+'%', probLoss>0.5?'neg':'pos'],
+        ].map(([l,v,c]) => `<div class="kpi"><div class="k-label">${l}</div><div class="k-val ${c}">${v}</div></div>`).join('');
+
+        // chart paths (sample 50 for performance)
+        const sample = paths.filter((_,i) => i % Math.max(1, Math.floor(nSims/50)) === 0).slice(0, 50);
+        const labels = Array.from({length:nDays+1}, (_,i) => i);
+
+        destroyChart('mcChart');
+        const datasets = sample.map((p, i) => ({
+            data: p, borderColor: p[p.length-1] >= cap ? '#00e39633' : '#ff456033',
+            borderWidth: 0.8, pointRadius: 0, fill: false
+        }));
+        // add median path
+        const medianPath = [cap];
+        let mv = cap;
+        const sortedDr = [...dr].sort((a,b)=>a-b);
+        const medRet = sortedDr[Math.floor(dr.length/2)];
+        for (let i = 0; i < nDays; i++) { mv *= (1+medRet); medianPath.push(mv); }
+
+        mkChart('mcChart', { type:'line', data: { labels, datasets: [
+            ...datasets,
+            { label:'Median', data: paths[Math.floor(nSims/2)], borderColor:'#fff', borderWidth:2, pointRadius:0, fill:false },
+            { label:'Initial', data: labels.map(()=>cap), borderColor:'#666', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false },
+        ]}, options: { responsive:true, plugins:{legend:{labels:{color:'#555',font:{size:9}}}}, scales:{ x:{ticks:{color:'#444',font:{size:8}},grid:{color:'#1a1d3a'},title:{display:true,text:'Trading Days',color:'#555'}}, y:{ticks:{color:'#444',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'#1a1d3a'}} } } });
+
+        // distribution
+        const bins=30, mn=Math.min(...finals), mx=Math.max(...finals);
+        const st=(mx-mn)/bins, hist=Array(bins).fill(0);
+        finals.forEach(v => { const b=Math.min(Math.floor((v-mn)/st),bins-1); if(b>=0)hist[b]++; });
+        const dlabels = hist.map((_,i) => '$'+(mn+i*st).toFixed(0));
+
+        mkChart('mcDistChart', { type:'bar', data: { labels:dlabels, datasets: [
+            { data:hist, backgroundColor:hist.map((_,i)=>(mn+i*st)<cap?'#ff456066':'#00e39666'), borderWidth:0 }
+        ]}, options: { responsive:true, plugins:{legend:{display:false}}, scales:{ x:{type:'category',ticks:{color:'#444',font:{size:8},maxTicksLimit:8},grid:{color:'#1a1d3a'}}, y:{ticks:{color:'#444',font:{size:9}},grid:{color:'#1a1d3a'}} } } });
+
+        document.getElementById('mcResults').style.display = 'block';
+    } catch(e) { alert(e.message); }
+    finally { btn.disabled = false; }
 }
 </script>
 </body>
