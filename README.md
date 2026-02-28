@@ -1,6 +1,6 @@
-﻿# Crypto Momentum Strategy Backtester
+# Crypto Momentum Strategy Backtester
 
-Backtests a momentum-based moving average crossover strategy on cryptocurrency price data. Uses CoinGecko's free API for historical data and simulates trading with realistic transaction costs and stop-loss.
+Backtests a momentum-based moving average crossover strategy on cryptocurrency price data. Uses CoinGecko free API for historical data and simulates trading with realistic transaction costs and stop-loss.
 
 ## Strategy
 
@@ -20,7 +20,7 @@ Signals are shifted by one day to prevent look-ahead bias.
 
 ## Quick Start
 
-`ash
+```bash
 # install dependencies
 pip install -r requirements.txt
 
@@ -38,7 +38,7 @@ python main.py --compare
 
 # disable stop-loss
 python main.py --no-stop-loss
-`
+```
 
 ## Command Line Options
 
@@ -51,17 +51,6 @@ python main.py --no-stop-loss
 | `--capital` | Starting capital (USD) | 10000 |
 | `--no-stop-loss` | Disable stop-loss | False |
 | `--compare` | Run on multiple coins | False |
-
-## Output
-
-The backtester generates:
-
-- **Performance metrics** printed to console (Sharpe, Sortino, Calmar ratios, drawdown, win rate, etc.)
-- `output/<coin>/equity_curve.png` - portfolio value vs buy-and-hold
-- `output/<coin>/signals.png` - price chart with entry/exit markers and indicators
-- `output/<coin>/daily_portfolio.csv` - daily portfolio values
-- `output/<coin>/trade_log.csv` - all executed trades with P&L
-
 
 ## Sample Output
 
@@ -96,16 +85,17 @@ The backtester generates:
 
 ## Project Structure
 
-`
+```
 crypto-momentum-strategy/
-|-- main.py              # CLI entry point with argument parsing
-|-- data_loader.py       # CoinGecko API data fetching with retries
-|-- strategy.py          # Technical indicators and signal generation
-|-- backtester.py        # Portfolio simulation with stop-loss
-|-- utils.py             # Metrics, plotting, and CSV export
-|-- config.py            # Default parameters
-|-- requirements.txt     # Python dependencies
-`
+    main.py              - CLI entry point with argument parsing
+    data_loader.py       - CoinGecko API data fetching with retries
+    strategy.py          - Technical indicators and signal generation
+    backtester.py        - Portfolio simulation with stop-loss
+    utils.py             - Metrics, plotting, and CSV export
+    config.py            - Default parameters
+    requirements.txt     - Python dependencies
+    output/              - Generated charts and CSV results
+```
 
 ## Metrics Reported
 
@@ -114,10 +104,10 @@ crypto-momentum-strategy/
 | Total Return | Overall portfolio return |
 | Sharpe Ratio | Risk-adjusted return (annualized) |
 | Sortino Ratio | Downside risk-adjusted return |
-| Calmar Ratio | Return / Max Drawdown |
+| Calmar Ratio | Return divided by Max Drawdown |
 | Max Drawdown | Largest peak-to-trough decline |
 | Win Rate | Percentage of profitable trades |
-| Profit Factor | Gross profit / Gross loss |
+| Profit Factor | Gross profit divided by gross loss |
 
 ## Technical Details
 
